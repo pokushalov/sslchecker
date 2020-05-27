@@ -8,5 +8,6 @@ email = {
     'send_email': False
 }
 alert = {
-    'days': 30
+    'days': 30,
+    'timeout': 30
 }

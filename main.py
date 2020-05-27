@@ -35,11 +35,12 @@ class checkSSL(threading.Thread):
         )
 
         # 3 second timeout
-        conn.settimeout(3.0)
+        conn.settimeout(config.alert['timeout'])
 
         logger.debug(f'{self.threadID}: Connect to {self.hostname}')
         conn.connect((self.hostname, 443))
         ssl_info = conn.getpeercert()
+
         # parse the string from the certificate into a Python datetime object
         return datetime.datetime.strptime(ssl_info['notAfter'], ssl_date_fmt)
 
