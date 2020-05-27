@@ -14,9 +14,10 @@ from collections import OrderedDict
 import config
 
 
-
 ################################################################################################################
-class checkSSL(threading.Thread):
+
+
+class CheckSSL(threading.Thread):
     def __init__(self, threadID, hostname, bufferdays, queue):
         threading.Thread.__init__(self)
         logger.debug(f'Starting thread {threadID}')
@@ -51,7 +52,7 @@ class checkSSL(threading.Thread):
         delta = expires - datetime.datetime.utcnow()
         return delta
 
-    def run(self) -> tuple:
+    def run(self):
         """Return test message for hostname cert expiration."""
         logger.info(f'{self.threadID}: Checking [{self.hostname}].')
         try:
@@ -121,7 +122,7 @@ def main():
     for cnt, current_hostname in enumerate(data):
         # check if line is not comment / commented out
         if not current_hostname.startswith("#") and len(current_hostname.strip()) != 0:
-            thread = checkSSL(cnt, current_hostname.strip(), config.alert['days'], que)
+            thread = CheckSSL(cnt, current_hostname.strip(), config.alert['days'], que)
             threads_list.append(thread)
 
     for thread in threads_list:
@@ -146,29 +147,32 @@ def main():
     order['socket'] = "Socket error:"
     order['cant'] = "Can't connect to server:"
     order['self'] = "Self signed certificates:"
-    order['alert'] = "Will epxpire soon:"
+    order['alert'] = "Will expire soon:"
     order['expired'] = "Already expired:"
 
     for k, v in order.items():
-        res = order[k]
-        info = report[k]
-        if k not in ('alert', 'expired'):
-            logger.info(v)
-            for item in info:
-                logger.info(f'\t{item[1]}')
-        else:
-            logger.error(v)
-            for item in info:
-                if k == 'expired':
-                    logger.error(f'\t{item[1]}')
-                else:
-                    logger.error(f'\t{item[0]} - {item[1]}')
-        logger.info('---------------------------------------------------')
-    alert_message = report['alert'] +  report['expired']
+        if k in report:
+            info = report[k]
+            if k not in ('alert', 'expired'):
+                logger.info(v)
+                for item in info:
+                    logger.info(f'\t{item[1]}')
+            else:
+                logger.error(v)
+                for item in info:
+                    if k == 'expired':
+                        logger.error(f'\t{item[1]}')
+                    else:
+                        logger.error(f'\t{item[0]} - {item[1]}')
+            logger.info('---------------------------------------------------')
+
+    alert_message = report.get('alert', []) + report.get('expire', [])
+
     if alert_message:
         sendEmail(alert_message)
     logger.info(f'Request to proceed with {len(data)} certificates.')
     logger.info(f'Done for {len(results)} certificates.')
+
 
 if __name__ == "__main__":
     main()
